@@ -124,15 +124,19 @@ export const useWatch = (animeId, initialEpisodeId) => {
         const data = await getServers(animeId, episodeId, { signal: controller.signal });
         if (!mounted) return;
 
-        const filteredServers = data?.filter(
-          (server) =>
-            server.serverName === "HD-1" ||
-            server.serverName === "HD-2" ||
-            // server.serverName === "HD-3" ||
-            server.serverName === "Vidstreaming" ||
-            server.serverName === "Vidcloud" ||
-            server.serverName === "DouVideo"
-        ) || [];
+        const allowedServers = [
+  "HD-1",
+  "HD-2",
+  "Vidstreaming",
+  "Vidcloud",
+  "DouVideo",
+  "VidSrc",
+  "MegaCloud",
+];
+
+const filteredServers = data?.filter(server =>
+  allowedServers.includes(server.serverName)
+) || [];
 
         let serversList = [...filteredServers];
 
