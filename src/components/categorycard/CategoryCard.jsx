@@ -118,16 +118,21 @@ const CategoryCard = React.memo(
     const { language } = useLanguage();
     const navigate = useNavigate();
 
-    const displayData = limit ? data.slice(0, limit) : data;
+    // Use useMemo to prevent unnecessary recalculations
+    const displayData = React.useMemo(() => {
+      return limit && data ? data.slice(0, limit) : data;
+    }, [data, limit]);
 
     const [itemsToRender, setItemsToRender] = useState(() => {
-      if (categoryPage && window.innerWidth > 758 && displayData.length > 4) {
+      if (categoryPage && window.innerWidth > 758 && displayData?.length > 4) {
         return { firstRow: displayData.slice(0, 4), remainingItems: displayData.slice(4) };
       }
-      return { firstRow: [], remainingItems: displayData };
+      return { firstRow: [], remainingItems: displayData || [] };
     });
 
     useEffect(() => {
+      if (!displayData) return;
+      
       const handleResize = () => {
         if (categoryPage && window.innerWidth > 758 && displayData.length > 4) {
           setItemsToRender({ firstRow: displayData.slice(0, 4), remainingItems: displayData.slice(4) });

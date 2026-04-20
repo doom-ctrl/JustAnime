@@ -1,11 +1,9 @@
-import axios from "axios";
+import client from '@/src/lib/api/miruro.client';
+import { mapAnimeCard } from '@/src/lib/api/mappers';
 
 const getTopSearch = async () => {
   try {
-    let workerUrls = import.meta.env.VITE_WORKER_URL?.split(",");
-    let baseUrl = workerUrls?.length
-      ? workerUrls[Math.floor(Math.random() * workerUrls.length)]
-      : import.meta.env.VITE_API_URL;
+    // Check cache (7 days)
     const storedData = localStorage.getItem("topSearch");
     if (storedData) {
       const { data, timestamp } = JSON.parse(storedData);
@@ -13,8 +11,11 @@ const getTopSearch = async () => {
         return data;
       }
     }
-    const { data } = await axios.get(`${baseUrl}/top-search`);
-    const results = data?.results || [];
+
+    // Fetch trending anime as top search results
+    const response = await client.get('/trending', { params: { page: 1, per_page: 10 } });
+    const results = (response.data.results || []).map(anime => mapAnimeCard(anime));
+
     if (results.length) {
       localStorage.setItem(
         "topSearch",

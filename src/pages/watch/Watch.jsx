@@ -38,7 +38,7 @@ export default function Watch() {
   const navigate = useNavigate();
   const { id: animeId } = useParams();
   const queryParams = new URLSearchParams(location.search);
-  let initialEpisodeId = queryParams.get("ep");
+  const urlEpisodeNum = queryParams.get("ep") ? parseInt(queryParams.get("ep"), 10) : null;
   const { language } = useLanguage();
   const isFirstSet = useRef(true);
   const [showNextEpisodeSchedule, setShowNextEpisodeSchedule] = useState(true);
@@ -47,6 +47,7 @@ export default function Watch() {
     buffering,
     streamInfo,
     streamUrl,
+    streamType,
     animeInfo,
     episodes,
     nextEpisodeSchedule,
@@ -70,7 +71,7 @@ export default function Watch() {
     activeServerName,
     setActiveServerName,
     seasons
-  } = useWatch(animeId, initialEpisodeId);
+  } = useWatch(animeId);
 
   const {
     autoPlay,
@@ -85,20 +86,49 @@ export default function Watch() {
   const playerRef = useRef(null);
   const episodesRef = useRef(null);
 
-  // Sync URL with episodeId
+  // Convert URL episode number to full episode slug and set it
+  useEffect(() => {
+    if (!episodes?.length) return;
+    
+    if (urlEpisodeNum) {
+      const foundEpisode = episodes.find(ep => ep.episode_no === urlEpisodeNum);
+      if (foundEpisode?.originalId) {
+        // Set the episode from URL
+        setEpisodeId(foundEpisode.originalId);
+        isFirstSet.current = false; // Don't replace URL since it already has ep param
+      }
+    }
+  }, [episodes, urlEpisodeNum, setEpisodeId]);
+
+  // Sync URL with episodeId (slug)
   useEffect(() => {
     if (!episodes?.length) return;
 
-    const currentEpNum = episodeId;
-    const isValidEpisode = episodes.some(ep => ep.id.split('ep=')[1] === currentEpNum);
+    const currentEpId = episodeId;
+    // episodeId is the full slug like "watch/arc/21/sub/animekai-1"
+    // Check if the current episodeId is valid
+    const isValidEpisode = episodes.some(ep => ep.originalId === currentEpId);
 
-    if (!currentEpNum || !isValidEpisode) {
-      const fallbackId = episodes[0].id.match(/ep=(\d+)/)?.[1];
-      if (fallbackId && fallbackId !== currentEpNum) setEpisodeId(fallbackId);
+    if (!currentEpId || !isValidEpisode) {
+      // Use first episode's originalId as fallback
+      const fallbackId = episodes[0]?.originalId;
+      if (fallbackId && fallbackId !== currentEpId) setEpisodeId(fallbackId);
       return;
     }
 
-    const newUrl = `/watch/${animeId}?ep=${currentEpNum}`;
+    // Extract episode number for URL display
+    const activeEpisode = episodes.find(ep => ep.originalId === currentEpId);
+    // Always use episode number if available, never use slug in URL
+    // episode_no can be 0 (falsy), so check for undefined/null specifically
+    const epNum = activeEpisode?.episode_no;
+    
+    if (epNum === undefined || epNum === null) {
+      console.warn('[Watch] Episode number not found for:', currentEpId);
+      return;
+    }
+    
+    // URL encode the episode number to be safe
+    const newUrl = `/watch/${animeId}?ep=${encodeURIComponent(epNum)}`;
     if (isFirstSet.current) {
       navigate(newUrl, { replace: true });
       isFirstSet.current = false;
@@ -201,6 +231,7 @@ export default function Watch() {
                   {!buffering ? (
                     <Player
                       streamUrl={streamUrl}
+                      streamType={streamType}
                       subtitles={subtitles}
                       intro={intro}
                       outro={outro}

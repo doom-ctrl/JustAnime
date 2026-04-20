@@ -1,17 +1,26 @@
-import axios from "axios";
+import client from '@/src/lib/api/miruro.client';
 
 const getQtip = async (id) => {
   try {
-    let workerUrls = import.meta.env.VITE_WORKER_URL?.split(",");
-    let baseUrl = workerUrls?.length
-      ? workerUrls[Math.floor(Math.random() * workerUrls.length)]
-      : import.meta.env.VITE_API_URL;
-    if (!baseUrl) throw new Error("No API endpoint defined.");
-    const response = await axios.get(`${baseUrl}/qtip/${id.split("-").pop()}`);
-    return response.data.results;
+    // Get anime info for tooltip
+    const response = await client.get(`/info/${id}`);
+    const anime = response.data;
+
+    if (anime) {
+      return {
+        title: anime.title?.english || anime.title?.romaji || 'Unknown',
+        image: anime.coverImage?.large || anime.coverImage?.extraLarge,
+        genres: anime.genres || [],
+        rating: anime.averageScore ? `${(anime.averageScore / 10).toFixed(1)}/10` : null,
+        episodes: anime.episodes,
+        status: anime.status,
+      };
+    }
+
+    return null;
   } catch (err) {
-    console.error("Error fetching genre info:", err);
-    return null; 
+    console.error("Error fetching tooltip info:", err);
+    return null;
   }
 };
 

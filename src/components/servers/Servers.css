@@ -7,3 +7,25 @@
 .servers:last-child {
   border-bottom: none;
 }
+
+/* Shimmer animation for active provider buttons */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Scale utility for hover states */
+.scale-\[1\.02\] {
+  transform: scale(1.02);
+}
+
+/* Hide source label on mobile, show pills on mobile below text */
+@media (max-width: 600px) {
+  .servers:first-child {
+    padding-top: 1rem;
+  }
+}

@@ -87,7 +87,7 @@ function Episodelist({
         const newRange = findRangeForEpisode(num);
         setSelectedRange(newRange);
         setActiveRange(`${newRange[0]}-${newRange[1]}`);
-        setSearchedEpisode(foundEpisode?.id);
+        setSearchedEpisode(foundEpisode?.originalId);
       }
     } else {
       setSearchedEpisode(null);
@@ -129,7 +129,7 @@ function Episodelist({
 
   useEffect(() => {
     const activeEpisode = episodes.find(
-      (item) => item?.id.match(/ep=(\d+)/)?.[1] === activeEpisodeId
+      (item) => item?.originalId === activeEpisodeId
     );
     if (activeEpisode) {
       setEpisodeNum(activeEpisode?.episode_no);
@@ -212,11 +212,13 @@ function Episodelist({
             ? episodes
               .slice(selectedRange[0] - 1, selectedRange[1])
               .map((item, index) => {
-                const episodeNumber = item?.id.match(/ep=(\d+)/)?.[1];
+                // episodeNumber for display, originalId for API calls
+                const episodeNumber = item?.episode_no;
+                const episodeSlug = item?.originalId;
                 const isActive =
-                  activeEpisodeId === episodeNumber ||
+                  activeEpisodeId === episodeSlug ||
                   currentEpisode === episodeNumber;
-                const isSearched = searchedEpisode === item?.id;
+                const isSearched = searchedEpisode === episodeSlug;
 
                 return (
                   <div
@@ -234,9 +236,9 @@ function Episodelist({
                         : "bg-[#2a2a2a] text-gray-400"
                       } ${isSearched ? "ring-2 ring-white" : ""}`}
                     onClick={() => {
-                      if (episodeNumber) {
-                        onEpisodeClick(episodeNumber);
-                        setActiveEpisodeId(episodeNumber);
+                      if (episodeSlug) {
+                        onEpisodeClick(episodeSlug);
+                        setActiveEpisodeId(episodeSlug);
                         setSearchedEpisode(null);
                       }
                     }}
@@ -248,11 +250,13 @@ function Episodelist({
                 );
               })
             : episodes?.map((item, index) => {
-              const episodeNumber = item?.id.match(/ep=(\d+)/)?.[1];
+              // episodeNumber for display, originalId for API calls
+              const episodeNumber = item?.episode_no;
+              const episodeSlug = item?.originalId;
               const isActive =
-                activeEpisodeId === episodeNumber ||
+                activeEpisodeId === episodeSlug ||
                 currentEpisode === episodeNumber;
-              const isSearched = searchedEpisode === item?.id;
+              const isSearched = searchedEpisode === episodeSlug;
 
               return (
                 <div
@@ -264,9 +268,9 @@ function Episodelist({
                     } hover:bg-[#2a2a2a] ${isActive ? "bg-[#2a2a2a]" : ""
                     } ${isSearched ? "ring-1 ring-white" : ""}`}
                   onClick={() => {
-                    if (episodeNumber) {
-                      onEpisodeClick(episodeNumber);
-                      setActiveEpisodeId(episodeNumber);
+                    if (episodeSlug) {
+                      onEpisodeClick(episodeSlug);
+                      setActiveEpisodeId(episodeSlug);
                       setSearchedEpisode(null);
                     }
                   }}

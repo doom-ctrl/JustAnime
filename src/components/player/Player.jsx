@@ -28,6 +28,7 @@ import {
 import "./Player.css";
 import website_name from "@/src/config/website";
 import getChapterStyles from "./getChapterStyle";
+import { HLS_PROXY_URL } from "@/src/lib/api/miruro.config";
 import artplayerPluginHlsControl from "artplayer-plugin-hls-control";
 import artplayerPluginUploadSubtitle from "./artplayerPluginUploadSubtitle";
 import { getTitle } from "@/src/utils/title.utils";
@@ -50,6 +51,7 @@ const KEY_CODES = {
 
 export default function Player({
   streamUrl,
+  streamType,
   subtitles,
   thumbnail,
   intro,
@@ -68,16 +70,18 @@ export default function Player({
   const artRef = useRef(null);
   const leftAtRef = useRef(0);
   const boundKeydownRef = useRef(null);
-  const proxy = import.meta.env.VITE_M3U8_PROXY_URL;
-  const m3u8proxy = import.meta.env.VITE_M3U8_PROXY_URL?.split(",") || [];
+  
+  // HLS Proxy URL from Miruro config
+  const hlsProxyUrl = HLS_PROXY_URL;
+  
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(
-    episodes?.findIndex((episode) => episode.id.match(/ep=(\d+)/)?.[1] === episodeId)
+    episodes?.findIndex((episode) => episode.id === episodeId)
   );
 
   useEffect(() => {
     if (episodes?.length > 0) {
       const newIndex = episodes.findIndex(
-        (episode) => episode.id.match(/ep=(\d+)/)?.[1] === episodeId
+        (episode) => episode.id === episodeId
       );
       setCurrentEpisodeIndex(newIndex);
     }
@@ -119,7 +123,7 @@ export default function Player({
         if (duration > 0 && currentTime >= duration) {
           art.pause();
           if (currentEpisodeIndex < episodes?.length - 1 && autoNext) {
-            playNext(episodes[currentEpisodeIndex + 1].id.match(/ep=(\d+)/)?.[1]);
+            playNext(episodes[currentEpisodeIndex + 1].id);
           }
         }
       });
@@ -131,7 +135,7 @@ export default function Player({
         if (duration > 0 && currentTime >= duration) {
           art.pause();
           if (currentEpisodeIndex < episodes?.length - 1 && autoNext) {
-            playNext(episodes[currentEpisodeIndex + 1].id.match(/ep=(\d+)/)?.[1]);
+            playNext(episodes[currentEpisodeIndex + 1].id);
           }
         }
       });
@@ -142,10 +146,12 @@ export default function Player({
 
   const createChapters = () => {
     const chapters = [];
-    if (intro?.start !== 0 || intro?.end !== 0) {
+    // Intro chapter
+    if (intro && (intro.start !== 0 || intro.end !== 0)) {
       chapters.push({ start: intro.start, end: intro.end, title: "intro" });
     }
-    if (outro?.start !== 0 || outro?.end !== 0) {
+    // Outro chapter
+    if (outro && (outro.start !== 0 || outro.end !== 0)) {
       chapters.push({ start: outro.start, end: outro.end, title: "outro" });
     }
     return chapters;
@@ -272,17 +278,14 @@ export default function Player({
       // ignore
     }
 
-    const hd1Proxy = import.meta.env.VITE_HD_1_PROXY_URL;
-    const currentProxy = (activeServerName === "HD-1" && hd1Proxy)
-      ? hd1Proxy
-      : m3u8proxy[Math.floor(Math.random() * m3u8proxy?.length)];
+    // Apply HLS Proxy for CORS bypass
+    let playerUrl = streamUrl;
+    if (hlsProxyUrl && streamUrl?.includes('.m3u8')) {
+      playerUrl = `${hlsProxyUrl}/proxy?url=${encodeURIComponent(streamUrl)}`;
+    }
 
     const art = new Artplayer({
-      url:
-        currentProxy +
-        encodeURIComponent(streamUrl) +
-        "&headers=" +
-        encodeURIComponent(JSON.stringify(headers)),
+      url: playerUrl,
       container: artRef.current,
       type: "m3u8",
       autoplay: autoPlay,
@@ -640,7 +643,22 @@ export default function Player({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streamUrl, subtitles, intro, outro, activeServerName]);
+  }, [streamUrl, subtitles, intro, outro, activeServerName, streamType]);
+
+  // Render iframe for embed streams
+  if (streamType === 'embed' && streamUrl) {
+    return (
+      <iframe
+        src={streamUrl}
+        className="w-full aspect-video bg-black"
+        allowFullScreen
+        allow="autoplay; fullscreen"
+        scrolling="no"
+        frameBorder="0"
+        title="Video Player"
+      />
+    );
+  }
 
   return <div ref={artRef} className="w-full h-full" />;
 }
