@@ -7,7 +7,6 @@ import getNextEpisodeSchedule from "../utils/getNextEpisodeSchedule.utils";
 import getStreamInfo from "@/src/utils/getStreamInfo.utils";
 import client from "@/src/lib/api/miruro.client";
 import { mapEpisodesFromProvider, PROVIDER_PREFERENCES } from "@/src/lib/api/mappers";
-import { HLS_PROXY_URL } from "@/src/lib/api/miruro.config";
 
 export const useWatch = (animeId, initialEpisodeId) => {
   const [error, setError] = useState(null);
@@ -189,20 +188,21 @@ export const useWatch = (animeId, initialEpisodeId) => {
 
         setStreamInfo(data);
 
-        // Find the best stream - prefer embed, fallback to HLS
+        // ── Stream selection ──────────────────────────────────────────────────────
+        // Prefer embed streams when available (more reliable with iframes)
         const embedStream = data.streams?.find(s => s.type === 'embed' && s.url);
         const hlsStream = data.streams?.find(s => s.type === 'hls' && s.url);
+        
         const selectedStream = embedStream || hlsStream;
 
         if (selectedStream) {
           setStreamType(selectedStream.type);
-
-          // For HLS streams, route through proxy for CORS
-          if (selectedStream.type === 'hls' && HLS_PROXY_URL) {
-            setStreamUrl(`${HLS_PROXY_URL}/proxy?url=${encodeURIComponent(selectedStream.url)}`);
-          } else {
-            setStreamUrl(selectedStream.url);
-          }
+          setStreamUrl(selectedStream.url);
+          setError(null);
+        } else {
+          setStreamUrl(null);
+          setStreamType(null);
+          setError(`No working streams found. Try switching servers.`);
         }
 
         // Set intro/outro
